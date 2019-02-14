@@ -726,3 +726,50 @@ frappe.ui.form.on("UOM Conversion Detail", {
 		}
 	}
 })
+
+
+// The section below contains custom scripts for Item
+// ================================================================================================
+/* This section contains code from the general functions section
+which are called is the form triggered functions section*/
+
+// global variables
+var required_fields = {tariff: ["min_quantity","max_quantity","difference_btw_max_and_min"],
+						meter:["initial_reading"]
+					}
+
+function hide_unhide_on_refresh(frm,required_fields){
+	
+	if(frm.doc.type_of_item == "Tariff"){
+		hide_unhide_fields(frm,required_fields["tariff"],true)
+	}
+	else if(frm.doc.type_of_item == "Meter"){
+		hide_unhide_fields(frm,required_fields["meter"],true)
+	}
+	else{
+		hide_unhide_fields(frm,required_fields["tariff"],false),
+		hide_unhide_fields(frm,required_fields["meter"],false)
+	}
+}
+
+
+/*function that hides fields ,called on refresh*/
+function hide_unhide_fields(frm,list_of_fields,hide_or_unhide){
+	for(var i = 0; i < list_of_fields.length; i++){
+		frm.toggle_display(list_of_fields[i],hide_or_unhide)
+	}
+}
+
+// * end of the general functions section
+// =================================================================================================
+
+// function that runs on refresh
+frappe.ui.form.on("Item", "refresh", function(frm) {
+	console.log("Refreshing !")
+	hide_unhide_on_refresh(frm,required_fields)
+})
+
+/* refresh in order to hide/unhide the correct fields*/
+frappe.ui.form.on("Item","type_of_item",function(frm){ 
+	frm.refresh()
+})
