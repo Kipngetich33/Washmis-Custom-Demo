@@ -60,6 +60,15 @@ class Customer(TransactionBase):
 			if self.loyalty_program == customer.loyalty_program and not self.loyalty_program_tier:
 				self.loyalty_program_tier = customer.loyalty_program_tier
 
+		# save new customer system number
+		if(self.status == "Active"):
+			check_required_details(self)
+		else: 
+			pass
+		# add customers system number n save
+		add_customer_system_no(self)
+		save_new_system_no(self)
+
 	def check_customer_group_change(self):
 		frappe.flags.customer_group_changed = False
 
@@ -380,3 +389,100 @@ def get_customer_primary_address(doctype, txt, searchfield, start, page_len, fil
 			'customer': customer,
 			'txt': '%%%s%%' % txt
 		})
+
+
+# ================================================================================================
+
+# the code below are custom controllers for the customer Doctype
+
+def check_required_details(self):
+	# check previous reading
+	if(self.previous_reading == None):
+		frappe.throw("Customer's Previous Reading Field is Empty")
+	else:
+		pass
+
+	# check readings
+	if(self.area == None):
+		frappe.throw("Customer's Area Field is Empty")
+	elif(self.zone == None):
+		frappe.throw("Customer's Zone Field is Empty")
+	elif(self.route == None):
+		frappe.throw("Customer's Route Field is Empty")
+
+	# check if dma exists
+	if(self.dma == None):
+		frappe.throw("Customer's DMA Field is Empty")
+	else:
+		pass
+
+	# check if account exists
+	if(len(self.accounts)>0):
+		pass
+	else:
+		frappe.throw("Add an Account to This Customer")
+
+	# check if type of customer is given
+	if(self.customer_group == None):
+		frappe.throw("Customer's Group Field is Empty")
+	else:
+		pass
+
+def add_customer_system_no(self):
+	'''
+	Function that checks the last customer system,
+	determine if the current customer system no is greater
+	than the last before adding it to current document
+	'''
+	last_saved_system_no = get_current_system_no()
+	current_customer_no = self.system_no
+	
+	if(current_customer_no):
+		'''check if it greater than current
+		system no in customer system no'''
+		if(int(current_customer_no) > last_saved_system_no):
+			self.system_no = last_saved_system_no +1
+		else:
+			pass
+	else:
+		# create a new system_no
+		self.system_no = last_saved_system_no +1
+	
+
+def get_current_system_no():
+	'''
+	Function that returns the value
+	in the customer system no
+	'''
+	current_system_no = frappe.db.get_value("Customer System Number","*","*",as_dict=True)
+	return int(current_system_no.customer_number)
+	
+
+def save_new_system_no(self):
+	'''
+	Function that  saves a new system number when 
+	a new customer record is made
+	'''
+	self_system_no = self.system_no
+	current_system_no1 = get_current_system_no()
+	if(self_system_no):
+		'''check if it greater than current
+		system no in customer system no'''
+		if(int(self_system_no) > current_system_no1):
+			doc = frappe.get_doc("Customer System Number","*")
+			doc.customer_number = doc.customer_number + 1
+			doc.save()
+		else:
+			pass
+	else:
+		# create a new system_no
+		frappe.throw("Something went wrong with the add_customer_system_no function")
+
+def check_duplicate_customers(self):
+	'''
+	function that checks for duplicates before saving 
+	a new customer
+	arg:
+	'''
+	pass
+

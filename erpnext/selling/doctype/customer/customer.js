@@ -125,3 +125,195 @@ frappe.ui.form.on("Customer", {
 		if(frm.doc.lead_name) frappe.model.clear_doc("Lead", frm.doc.lead_name);
 	},
 });
+
+
+// custom scripts below
+// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+/*general functions section*/
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// global variables
+
+var latest_customer_sys_no = 0
+
+// end of global varibles section
+
+// function creates a new project
+function create_new_project(){
+	if(cur_frm.doc.status == "Pending Application"){
+		frappe.route_options = {"system_no":cur_frm.doc.system_no,"customer":cur_frm.doc.customer_name}
+		frappe.set_route("Form", "Project","New Project 1")
+	}
+	else{
+		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
+	}
+
+} 
+
+// function that supercedes the doctype
+function supercede_function(){
+	cur_frm.copy_doc()
+}
+
+// function that creates an alert message
+function alert_message(message_to_print){
+	msgprint(message_to_print)
+}
+
+// alert function
+function alert_new_project(alert_message){
+	frappe.confirm(
+		alert_message("Have You Vefied All Customer Details"),
+		function(){
+			// change the status to verified
+		}
+	)
+}
+
+// alert function
+function confirm_verify_customer(new_status){
+	frappe.confirm(
+		"Have you verified all the customer details?",
+		function(){
+			cur_frm.set_value("status", new_status)
+			cur_frm.set_value("customer_verified", "Yes")
+			cur_frm.save();
+			show_alert('Customer Was Verified Successfully, You Can Now Set the Status to Active')
+		}
+	)
+}
+
+
+// function that sets filters for the different territory fields
+function set_country(territory_field,type_of_territory){
+	cur_frm.set_query(territory_field, function() {
+		return {
+			"filters": {
+				"type_of_territory": type_of_territory
+			}
+		}
+	});
+}
+
+// function that sets custom buttons for the customer
+function add_custom_buttons(button_name,new_status){
+	cur_frm.add_custom_button(__(button_name), function(){
+		
+		if(new_status == "Supercede"){
+			console.log("supercede")
+			if(cur_frm.doc.status == "Terminated" || cur_frm.doc.status == "Inactive"){
+				alert_function("Do you want to supercede this account",supercede_function)
+				
+			}
+			else{
+				// alert the user that the account cannot be superseded
+				alert_message("You Cannot Supercede This Account")
+			}
+		}
+		else if(new_status == "Verified"){
+			
+		}
+		else{
+			if(cur_frm.doc.customer_verified == "No" && new_status != "Inactive"){
+				alert_message("You Need to Verify the Customer First")
+			}
+			if(cur_frm.doc.customer_verified == "No" && new_status == "Inactive"){
+				confirm_verify_customer(new_status)
+			}
+			else{
+				cur_frm.set_value("status", new_status)
+				cur_frm.save();
+			}
+			
+		}
+	},__("Customer Management Menu"));
+}
+
+// function that sets filters for the different territory fields
+function filter_field(field,filter_name1,filter_name2){
+	cur_frm.set_query(field, function() {
+		return {
+			"filters": {
+				category_of_warehouse:filter_name2
+			}
+		}
+	});
+}
+
+
+/*frappe call function that gets a docytype without filters*/
+function get_doctype_without_filters(requested_doctype){
+	frappe.call({
+		method: 'frappe.client.get',
+		args: {
+			doctype:requested_doctype,
+		},
+		callback: function(response) {
+			return response
+		}
+	});
+
+}
+
+
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+/*end of the general functions section*/
+
+
+/*section below contains field triggered functions*/
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+/*Functionality that sets the value of form query 'route' 
+to show only routes*/
+
+frappe.ui.form.on("Customer", "refresh", function(frm) {
+	console.log("Running through js")
+	
+	// sets the value of the country/territory query field
+	set_country("territory","Country")
+	set_country("area","Area")
+	set_country("zone","Zone")
+	set_country("route","Route")
+	// end of set territory field details
+
+	// add custom buttons
+	add_custom_buttons("Activate","Active")
+	add_custom_buttons("Inactivate","Inactive")
+	add_custom_buttons("Reconnect","Reconnected")
+	add_custom_buttons("Disconnect","Disconnected")
+	add_custom_buttons("Terminate","Terminated")
+	add_custom_buttons("Supercede","Supercede")
+	add_custom_buttons("Verify Customer","Inactive")
+
+	// filter dma by warehouse dma
+	// filter_field("dma","DMA Bulk Meter - UL")
+	filter_field("dma","DMA Bulk Meter - UL","DMA(Bulk Meter)")
+	
+});
+
+
+/* this code fetches the customer name and the project name and 
+creates a new project using those details*/
+frappe.ui.form.on("Customer", "new_project", function(frm) {
+	if(cur_frm.doc.status == "Pending Application"){
+		cur_frm.save()
+		alert_new_project("Create New Project")
+	}
+	else{
+		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
+	}
+});
+
+
+/*save function */
+frappe.ui.form.on("Customer", "create_application", function(frm) {
+	if(cur_frm.doc.status == "Pending Application"){
+		cur_frm.save()
+		alert_new_project("Create New Project")
+	}
+	else{
+		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
+	}
+});
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+/*End of the field triggered functions*/
