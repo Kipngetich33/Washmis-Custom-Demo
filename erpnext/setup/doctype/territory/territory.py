@@ -24,29 +24,29 @@ class Territory(NestedSet):
 		self.actual_territory_name = capitalized_name
 
 		# check if Territory is already saved
-		if(self.saved == "yes"):
-			# do nothing
-			pass
-		else:
-			self.saved = "yes"
-			if(self.parent_territory):
-				territory_available = check_territory_availability(capitalized_name,self.parent_territory)
+		# if(self.saved == "yes"):
+		# 	# do nothing
+		# 	pass
+		# else:
+		# 	self.saved = "yes"
+		# 	if(self.parent_territory):
+		# 		territory_available = check_territory_availability(capitalized_name,self.parent_territory)
 				
-				if(territory_available["status"]):
-					if(territory_available["message"]=="Duplicate"):
-						frappe.throw("Duplicate Territory Name")
-					elif(territory_available["message"]=="Similar"):
-						# create territory and append parent name
-						print "new territory"
-						self.territory_name = capitalized_name + "-"+self.parent_territory
-						self.name = capitalized_name + "-"+self.parent_territory
-				else:
-					# create territory
-					self.territory_name = capitalized_name
-					self.name = capitalized_name
-			else:
-				# no parent exist yet hence this the the initial setup
-				pass
+		# 		if(territory_available["status"]):
+		# 			if(territory_available["message"]=="Duplicate"):
+		# 				frappe.throw("Duplicate Territory Name")
+		# 			elif(territory_available["message"]=="Similar"):
+		# 				# create territory and append parent name
+		# 				print "new territory"
+		# 				self.territory_name = capitalized_name + "-"+self.parent_territory
+		# 				self.name = capitalized_name + "-"+self.parent_territory
+		# 		else:
+		# 			# create territory
+		# 			self.territory_name = capitalized_name
+		# 			self.name = capitalized_name
+		# 	else:
+		# 		# no parent exist yet hence this the the initial setup
+		# 		pass
 
 	def on_update(self):
 		super(Territory, self).on_update()
