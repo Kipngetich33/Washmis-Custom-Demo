@@ -29,20 +29,24 @@ class Territory(NestedSet):
 			pass
 		else:
 			self.saved = "yes"
-			territory_available = check_territory_availability(capitalized_name,self.parent_territory)
-            
-			if(territory_available["status"]):
-				if(territory_available["message"]=="Duplicate"):
-					frappe.throw("Duplicate Territory Name")
-				elif(territory_available["message"]=="Similar"):
-					# create territory and append parent name
-					print "new territory"
-					self.territory_name = capitalized_name + "-"+self.parent_territory
-					self.name = capitalized_name + "-"+self.parent_territory
+			if(self.parent_territory):
+				territory_available = check_territory_availability(capitalized_name,self.parent_territory)
+				
+				if(territory_available["status"]):
+					if(territory_available["message"]=="Duplicate"):
+						frappe.throw("Duplicate Territory Name")
+					elif(territory_available["message"]=="Similar"):
+						# create territory and append parent name
+						print "new territory"
+						self.territory_name = capitalized_name + "-"+self.parent_territory
+						self.name = capitalized_name + "-"+self.parent_territory
+				else:
+					# create territory
+					self.territory_name = capitalized_name
+					self.name = capitalized_name
 			else:
-				# create territory
-				self.territory_name = capitalized_name
-				self.name = capitalized_name
+				# no parent exist yet hence this the the initial setup
+				pass
 
 	def on_update(self):
 		super(Territory, self).on_update()
