@@ -18,9 +18,11 @@ class Territory(NestedSet):
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory"))
 
+		print "*"*80
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
 		self.actual_territory_name = capitalized_name
+
 		# check if Territory is already saved
 		if(self.saved == "yes"):
 			# do nothing
@@ -31,13 +33,13 @@ class Territory(NestedSet):
             
 			if(territory_available["status"]):
 				if(territory_available["message"]=="Duplicate"):
-					pass
-			elif(territory_available["message"]=="Similar"):
-				# create territory and append parent name
-				self.territory_name = capitalized_name + "-"+self.parent_territory
-				self.name = capitalized_name + "-"+self.parent_territory
-
-			elif(territory_available["status"] == False):
+					frappe.throw("Duplicate Territory Name")
+				elif(territory_available["message"]=="Similar"):
+					# create territory and append parent name
+					print "new territory"
+					self.territory_name = capitalized_name + "-"+self.parent_territory
+					self.name = capitalized_name + "-"+self.parent_territory
+			else:
 				# create territory
 				self.territory_name = capitalized_name
 				self.name = capitalized_name
@@ -99,6 +101,10 @@ def check_territory_availability(territory_name,parent_territory):
     )
 
 	if(len(results)==0):
+		print "lenght of results"
+		print len(results)
+		print "length of other"
+		print len(other_results)
 		# no duplicate name undersame parent
 		if(len(other_results)==0):
 			# no territory from other parents have name
