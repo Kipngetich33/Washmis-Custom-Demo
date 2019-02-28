@@ -1202,7 +1202,6 @@ function set_general_details(data) {
 	cur_frm.set_value("territory", data.message.territory);
 }
 
-
 // function that adds rows to the items child table
 function add_row_and_values(i, list_of_items, units_within_category) {
 	cur_frm.grids[0].grid.add_new_row(null, null, false);

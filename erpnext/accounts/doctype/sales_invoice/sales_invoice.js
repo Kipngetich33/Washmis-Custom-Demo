@@ -1108,3 +1108,90 @@ var add_to_item_line = function(frm, checked_values, invoice_healthcare_services
 	}
 };
 
+// The section below contains custom scripts for the sales invoice
+// ================================================================================================
+/* This section contains code from the general functions section
+which are called is the form triggered functions section*/
+
+
+var field_to_hide_unhide = {
+	bill: ["billing_period", "route", "area", "zone",
+		"previous_reading", "current_reading", "consumption",
+		"disconnection_profile", "type_of_bill", "collect_items"
+	],
+	new_connection_fee: ["route", "area", "zone", "project",
+		"collect_items"],
+	deposit: ["route", "area", "zone", "project", "collect_items"],
+	penalty: ["route", "area", "zone", "collect_items"],
+	other: [],
+	all: ["billing_period", "route", "area", "zone",
+		"previous_reading", "current_reading", "consumption",
+		"disconnection_profile", "project", "type_of_bill",
+		"collect_items"
+	],
+}
+
+
+/*function that hides fields ,called on refresh*/
+function hide_unhide_fields(frm, list_of_fields, hide_or_unhide) {
+	for (var i = 0; i < list_of_fields.length; i++) {
+		frm.toggle_display(list_of_fields[i], hide_or_unhide)
+	}
+}
+
+
+// function that hides or unhides certain fields on refresh
+function hide_unhide_on_refresh(frm) {
+	console.log("On refresh")
+	if (frm.doc.type_of_invoice == "Bill") {
+		hide_function(frm, field_to_hide_unhide, "bill")
+	}
+	else if (frm.doc.type_of_invoice == "Deposit") {
+		hide_function(frm, field_to_hide_unhide, "deposit")
+	}
+	else if (frm.doc.type_of_invoice == "New Connection Fee") {
+		hide_function(frm, field_to_hide_unhide, "new_connection_fee")
+	}
+	else if (frm.doc.type_of_invoice == "Penalty") {
+		hide_function(frm, field_to_hide_unhide, "penalty")
+	}
+	else if (frm.doc.type_of_invoice == "Other") {
+		hide_function(frm, field_to_hide_unhide, "other")
+	}
+	else {
+		hide_function(frm, field_to_hide_unhide, "none")
+	}
+
+	function hide_function(frm, field_to_hide_unhide, type_of_invoice) {
+		var hide_fields = field_to_hide_unhide["all"]
+		var unhide_fields = field_to_hide_unhide[type_of_invoice]
+		if (type_of_invoice == "none") {
+			hide_unhide_fields(frm, hide_fields, false)
+		}
+		else {
+			hide_unhide_fields(frm, hide_fields, false)
+			hide_unhide_fields(frm, unhide_fields, true)
+		}
+	}
+}
+
+/* end of the general functions section
+// =================================================================================================
+/* This section  contains functions that are triggered by the form action refresh or
+reload to perform various action*/
+
+/* end of the form triggered functions section
+// =================================================================================================
+/*function that acts when the readings field under meter reading sheet is
+filled*/
+
+// function that runs on refresh
+frappe.ui.form.on("Sales Invoice", "refresh", function (frm) {
+	console.log("Refreshing !")
+	hide_unhide_on_refresh(frm)
+})
+
+// function that runs when the type_of_invoice field is clicked
+frappe.ui.form.on("Sales Invoice", "type_of_invoice", function (frm) {
+	frm.refresh()
+})
