@@ -735,8 +735,7 @@ which are called is the form triggered functions section*/
 
 // global variables
 var required_fields = {tariff: ["min_quantity","max_quantity","difference_btw_max_and_min"],
-						meter:["initial_reading"],
-						all:["min_quantity","max_quantity","difference_btw_max_and_min","initial_reading"]
+						all:["min_quantity","max_quantity","difference_btw_max_and_min"]
 					}
 
 function hide_unhide_on_refresh(frm,required_fields){
@@ -747,7 +746,6 @@ function hide_unhide_on_refresh(frm,required_fields){
 	}
 	else if(frm.doc.type_of_item == "Meter"){
 		hide_unhide_fields(frm,required_fields["all"],false)
-		hide_unhide_fields(frm,required_fields["meter"],true)
 	}
 	else{
 		hide_unhide_fields(frm,required_fields["all"],false)

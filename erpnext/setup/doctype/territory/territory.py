@@ -105,10 +105,6 @@ def check_territory_availability(territory_name,parent_territory):
     )
 
 	if(len(results)==0):
-		print "lenght of results"
-		print len(results)
-		print "length of other"
-		print len(other_results)
 		# no duplicate name undersame parent
 		if(len(other_results)==0):
 			# no territory from other parents have name

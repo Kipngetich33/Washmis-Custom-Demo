@@ -1113,7 +1113,6 @@ var add_to_item_line = function(frm, checked_values, invoice_healthcare_services
 /* This section contains code from the general functions section
 which are called is the form triggered functions section*/
 
-
 var field_to_hide_unhide = {
 	bill: ["billing_period", "route", "area", "zone",
 		"previous_reading", "current_reading", "consumption",
@@ -1130,7 +1129,6 @@ var field_to_hide_unhide = {
 		"collect_items"
 	],
 }
-
 
 /*function that hides fields ,called on refresh*/
 function hide_unhide_fields(frm, list_of_fields, hide_or_unhide) {
