@@ -76,6 +76,7 @@ frappe.ui.form.on("Project", {
 
 			frm.trigger('show_dashboard');
 		}
+
 	},
 	tasks_refresh: function (frm) {
 		var grid = frm.get_field('tasks').grid;
@@ -120,3 +121,137 @@ frappe.ui.form.on("Project Task", {
 		frm.trigger('tasks_refresh');
 	},
 });
+
+
+// ================================================================================================
+/* This section contains code from the general functions section
+which are called is the form triggered functions section*/
+
+// function that alerts a message provided to it as parameter
+function alert_message(message_to_print){
+	msgprint(message_to_print)
+}
+
+/* end of the general functions section
+// =================================================================================================
+/* This section  contains functions that are triggered by the form action refresh or
+reload to perform various action*/
+// functionality triggered by clicking on the project type
+
+
+frappe.ui.form.on("Project", "project_type", function (frm) {
+	if(frm.doc.project_type == "New Connection Project"){
+		
+		// get customers for route and billing period
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: 	{
+					doctype: "Common Tasks",
+					filters: {
+						type_of_project:frm.doc.project_type
+					},
+			fields:["*"]
+			},
+			callback: function(response) {	
+				if(response.message.length == 0){
+					alert_message("Please Create Related Tasks Under the Common Tasks doctype")
+				}
+				else if(response.message.length > 0){
+					// ensure that no other task are in the tasks table
+					/* ordering of tasks is a useful functionality that should be
+					developed especially for tasks that are dependent on others*/
+					// ordered_tasks = order_common_tasks(response.message)
+
+					// create tasks on project's child table
+					retrive_task_details(frm,response.message)
+				}
+				else{
+					alert_message("Something went wrong while retrieving Reading Sheets")
+				}	
+			}	
+		});
+	}
+})
+
+
+// function that users the list of tasks to get details of the tasks
+function retrive_task_details(frm,list_of_tasks){
+	
+	// clear the child table first
+	cur_frm.clear_table("tasks"); 
+	cur_frm.refresh_fields();
+
+	// get the current document model
+	var doc = frappe.model.get_doc('Project',frm.docname);
+	doc.department = "Operations - UL"
+	for(var i = 0; i< list_of_tasks.length; i++){
+		var current_task = list_of_tasks[i]
+		// console.log(list_of_tasks[i])
+
+		// create tasks
+		var row = frappe.model.add_child(doc, 'tasks');
+		row.title = current_task.title_of_task
+			
+		// get start_date
+		var today = new Date();
+		var start_date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+		row.start_date = start_date
+
+		// get end date
+		var turnaround_hours = 0
+		if(current_task.average_turn_around_time == "hours"){
+			turnaround_hours = current_task.hours
+		}
+		else{
+			turnaround_hours = current_task.days * 24
+		}
+
+		// change it back to days
+		var turnaround_days = turnaround_hours / 24
+		
+		// round of those less than a day to 1
+		if(turnaround_days < 1){
+			turnaround_days = 1
+		}
+
+		// get the end date
+		var end_date = get_end_day(today,turnaround_days)
+		row.end_date = end_date
+	}
+	cur_frm.refresh()
+
+}
+
+// function that orders the tasks from the first to the last based
+// the order the tasks should be done in relation to others
+function order_common_tasks(retrieved_tasks){
+	console.log("Ordered Common Task")
+	var related_tasks = []
+	var un_related_tasks = []
+	for(var i = 0;i<retrieved_tasks.length;i++){
+		var current_task = retrieved_tasks[i]
+		if(current_task.does_this_task_require_to_be_handled_after_another_task == "Yes"){
+			related_tasks.push(retrieved_tasks[i])
+		}
+		else{
+
+		}
+	}
+}
+
+
+/* function that get the end date of a tasks by adding the turnaround_days
+to the start_date*/
+function get_end_day(start_date,turnaround_days){
+
+	// define if the current year is leap year
+	Date.prototype.addDays = function(days) {
+		var date = new Date(this.valueOf());
+		date.setDate(date.getDate() + days);
+		return date;
+	}
+	var end_date = start_date.addDays(turnaround_days)
+
+	return end_date.getFullYear()+'-'+(end_date.getMonth()+1)+'-'+end_date.getDate();
+	
+}

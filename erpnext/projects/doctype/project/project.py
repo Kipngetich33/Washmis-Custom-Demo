@@ -593,3 +593,8 @@ def create_kanban_board_if_not_exists(project):
 		quick_kanban_board('Task', project, 'status')
 
 	return True
+
+
+# add functionality that assigns tasks to different erpnext users
+def assign_tasks():
+	pass
