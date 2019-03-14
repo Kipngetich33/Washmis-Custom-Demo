@@ -51,6 +51,92 @@ class Project(Document):
 
 			self.append("tasks", task_map)
 
+	
+	# the function below is a custom function to get recipients
+	def prepare_recipients(self):
+		'''
+		Get Applicable recipients to recieve email
+		'''
+		if(self.project_type == "New Connection Project"):
+			print "*"*80
+			# initialize dictionary of tasks and their recipients
+			all_recipients = []
+			already_recieved_mail = []
+
+			# get all the initially added recipients
+			for user in self.users:
+				if(user.welcome_email_sent == 0):
+					all_recipients.append(user.user)
+				else:
+					already_recieved_mail.append(user.user)
+
+			# clear the users table to avoid duplicates
+			self.users = []
+
+			for task in self.get_project_tasks():
+				# initilize list of email recipients as empty
+				list_of_email_recipient = []
+
+				# get the manager within department
+				list_of_managers = frappe.get_list("Employee",
+					fields=["name","user_id","employee_name"],
+					filters = {
+						"department":task.department,
+						"designation":"Manager"
+				})
+
+				if(len(list_of_managers)>0):
+					list_of_email_recipient = list_of_managers
+				else:
+					# get list of employees within department
+					list_of_employees = frappe.get_list("Employee",
+						fields=["name","user_id","employee_name"],
+						filters = {
+							"department":task.department,
+					})
+					list_of_email_recipient = list_of_employees
+
+				for recipient in list_of_email_recipient:
+					if(recipient["user_id"] in already_recieved_mail):
+						pass
+					else:
+						all_recipients.append(recipient["user_id"])
+			
+			# get unique_mails and add them them to project users list
+			for unique_recipient in set(all_recipients):
+				
+				# structure the email message
+				url = get_url("/project/?name={0}".format(self.name))
+				messages = (
+					_("You have been invited to collaborate on the project: {0} , ".format(self.name)),
+					url,
+					_("Join")
+				)
+
+				content = """
+				<p>{0}.</p>
+				<p><a href="{1}">{2}</a></p>
+				"""
+				# send message 
+				frappe.sendmail(unique_recipient, subject=_("Project Collaboration Invitation"),
+								content=content.format(*messages))
+
+				#add email to list of already_recieved_mail
+				already_recieved_mail.append(unique_recipient)
+
+		else:
+			# this is not a new connecion project 
+			pass
+		
+		# add all the users who have recieved mail to the list of project users
+		for recipient in set(already_recieved_mail):
+			self.append("users",{
+				"user":recipient,
+				"email":recipient,
+				"welcome_email_sent":1
+			})
+
+
 	def get_tasks(self):
 		if self.name is None:
 			return {}
@@ -64,6 +150,18 @@ class Project(Document):
 
 			return frappe.get_all("Task", "*", filters, order_by="exp_start_date asc")
 
+	def get_project_tasks(self):
+		'''
+		Custom function to get all the project
+		tasks available
+		'''
+		if self.name is None:
+			return {}
+		else:
+			filters = {"parent": self.name}
+			return frappe.get_all("Project Task", "*", filters)
+
+
 	def validate(self):
 		self.validate_project_name()
 		self.validate_weights()
@@ -71,6 +169,7 @@ class Project(Document):
 		self.tasks = []
 		self.load_tasks()
 		self.validate_dates()
+		self.prepare_recipients()
 		self.send_welcome_email()
 		self.update_percent_complete()
 
@@ -146,7 +245,7 @@ class Project(Document):
 					"exp_start_date": t.start_date,
 					"exp_end_date": t.end_date,
 					"description": t.description,
-					"task_weight": t.task_weight
+					"task_weight": t.task_weight,
 				})
 
 				self.map_custom_fields(t, task)
@@ -294,7 +393,7 @@ class Project(Document):
 	def send_welcome_email(self):
 		url = get_url("/project/?name={0}".format(self.name))
 		messages = (
-			_("You have been invited to collaborate on the project: {0}".format(self.name)),
+			_("You have been invited to collaborate on the project: {0} , ".format(self.name)),
 			url,
 			_("Join")
 		)
@@ -593,8 +692,3 @@ def create_kanban_board_if_not_exists(project):
 		quick_kanban_board('Task', project, 'status')
 
 	return True
-
-
-# add functionality that assigns tasks to different erpnext users
-def assign_tasks():
-	pass

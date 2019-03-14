@@ -184,40 +184,47 @@ function retrive_task_details(frm,list_of_tasks){
 	// get the current document model
 	var doc = frappe.model.get_doc('Project',frm.docname);
 	doc.department = "Operations - UL"
+	
+	// initialize largest enddate to 01-01-1970
+	var project_end_date = new Date(0);
+
 	for(var i = 0; i< list_of_tasks.length; i++){
 		var current_task = list_of_tasks[i]
-		// console.log(list_of_tasks[i])
-
+		
 		// create tasks
 		var row = frappe.model.add_child(doc, 'tasks');
 		row.title = current_task.title_of_task
+		row.department = current_task.concerned_department
 			
 		// get start_date
 		var today = new Date();
 		var start_date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
 		row.start_date = start_date
-
-		// get end date
-		var turnaround_hours = 0
-		if(current_task.average_turn_around_time == "hours"){
-			turnaround_hours = current_task.hours
-		}
-		else{
-			turnaround_hours = current_task.days * 24
-		}
-
-		// change it back to days
-		var turnaround_days = turnaround_hours / 24
 		
-		// round of those less than a day to 1
-		if(turnaround_days < 1){
-			turnaround_days = 1
+		// get turnaround_days 
+		var turnaround_days =  current_task.total_time_to_finish_task
+		if((parseFloat(turnaround_days)- parseInt(turnaround_days)) > 0){
+			turnaround_days = parseInt(turnaround_days) +1
 		}
 
 		// get the end date
 		var end_date = get_end_day(today,turnaround_days)
-		row.end_date = end_date
+		// get the largest date for all the task
+		if(end_date > project_end_date){
+			project_end_date = end_date
+		}
+		
+		// add the end date to tasks
+		row.end_date = end_date.getFullYear()+'-'+(end_date.getMonth()+1)+'-'+end_date.getDate();
+
 	}
+
+	// set the largest date as the expected end date of the project
+	frm.doc.expected_end_date = project_end_date.getFullYear()+'-'+(project_end_date.getMonth()+1)+'-'+project_end_date.getDate();
+
+	// set the project start_date as today
+	var date_now = new Date()
+	frm.doc.expected_start_date = date_now.getFullYear()+'-'+(date_now.getMonth()+1)+'-'+date_now.getDate();
 	cur_frm.refresh()
 
 }
@@ -252,6 +259,5 @@ function get_end_day(start_date,turnaround_days){
 	}
 	var end_date = start_date.addDays(turnaround_days)
 
-	return end_date.getFullYear()+'-'+(end_date.getMonth()+1)+'-'+end_date.getDate();
-	
+	return end_date
 }
