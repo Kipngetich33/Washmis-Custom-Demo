@@ -58,7 +58,10 @@ class Project(Document):
 		Get Applicable recipients to recieve email
 		'''
 		if(self.project_type == "New Connection Project"):
-			print "*"*80
+			# customer was given
+			if(self.customer == None):
+				frappe.throw("Please add Customer For this Project")
+					
 			# initialize dictionary of tasks and their recipients
 			all_recipients = []
 			already_recieved_mail = []
