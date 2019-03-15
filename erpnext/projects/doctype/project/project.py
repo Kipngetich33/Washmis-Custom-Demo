@@ -127,18 +127,16 @@ class Project(Document):
 				#add email to list of already_recieved_mail
 				already_recieved_mail.append(unique_recipient)
 
+			# add all the users who have recieved mail to the list of project users
+			for recipient in set(already_recieved_mail):
+				self.append("users",{
+					"user":recipient,
+					"email":recipient,
+					"welcome_email_sent":1
+				})
 		else:
 			# this is not a new connecion project 
 			pass
-		
-		# add all the users who have recieved mail to the list of project users
-		for recipient in set(already_recieved_mail):
-			self.append("users",{
-				"user":recipient,
-				"email":recipient,
-				"welcome_email_sent":1
-			})
-
 
 	def get_tasks(self):
 		if self.name is None:
