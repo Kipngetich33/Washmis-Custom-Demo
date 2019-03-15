@@ -428,6 +428,8 @@ def check_required_details(self):
 	else:
 		pass
 
+	# Add code below to check validity of Survey Data and New Connection
+
 def add_customer_system_no(self):
 	'''
 	Function that checks the last customer system,
