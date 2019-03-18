@@ -428,7 +428,44 @@ def check_required_details(self):
 	else:
 		pass
 
-	# Add code below to check validity of Survey Data and New Connection
+	# check if new connection project is complete
+	if(self.connection_project == None):
+		# no connection project exist
+		frappe.throw("Please Add a New Connection Project")
+	else:
+		# check if the project is complete
+		list_of_projects = frappe.get_list("Project",
+			fields=["status"],
+			filters = {
+				"name":self.connection_project
+		})
+
+		project_status = list_of_projects[0]["status"]
+		if(project_status == "Completed"):
+			pass
+		else:
+			frappe.throw("A Customer Can Only Be Activated Once their New Connection Project is Complete")
+
+	# Check to ensure Survey Data Record is Complete
+	if(self.survey_data == None):
+		# no connection project exist
+		frappe.throw("Please Provide A Survey Data Record in the Survey Data Field")
+	else:
+		# check if the project is complete
+		survey_data_list = frappe.get_list("Survey Data",
+			fields=["connection_with_company"],
+			filters = {
+				"name":self.survey_data,
+		})
+
+		connection_with_company = survey_data_list[0]["connection_with_company"]
+
+		if(connection_with_company == "Not Connected"):
+			# customer is not connected
+			frappe.throw("Cannot Activate a Customer Who is Not Currently Connected")
+		else:
+			# customer is connected
+			pass
 
 def add_customer_system_no(self):
 	'''
