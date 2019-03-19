@@ -61,7 +61,26 @@ class Project(Document):
 			# customer was given
 			if(self.customer == None):
 				frappe.throw("Please add Customer For this Project")
-					
+			else:
+				# if customer is given check if a duplicate record exist
+				list_of_projects = frappe.get_list("Project",
+					fields=["name","customer"],
+					filters = {
+						"customer":self.customer,
+						"project_type":"New Connection Project"
+				})
+
+				if(len(list_of_projects)>0):
+					# check if its the current doc
+					if(self.name == list_of_projects[0].name):
+						# this is an update
+						pass
+					else:
+						# this is a duplicate
+						frappe.throw("A Project of Type 'New Connection Project' for Customer {} Already Exists".format(self.customer))
+				else:
+					pass
+
 			# initialize dictionary of tasks and their recipients
 			all_recipients = []
 			already_recieved_mail = []
