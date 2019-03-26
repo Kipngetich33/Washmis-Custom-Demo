@@ -1116,7 +1116,8 @@ which are called is the form triggered functions section*/
 var field_to_hide_unhide = {
 	bill: ["billing_period", "route", "area", "zone",
 		"previous_reading", "current_reading", "consumption",
-		"disconnection_profile", "type_of_bill", "collect_items"
+		"disconnection_profile", "type_of_bill", "collect_items",
+		"reading_code"
 	],
 	new_connection_fee: ["route", "area", "zone", "project",
 		"collect_items"],
@@ -1126,7 +1127,7 @@ var field_to_hide_unhide = {
 	all: ["billing_period", "route", "area", "zone",
 		"previous_reading", "current_reading", "consumption",
 		"disconnection_profile", "project", "type_of_bill",
-		"collect_items"
+		"collect_items","reading_code"
 	],
 }
 

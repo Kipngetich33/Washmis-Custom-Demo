@@ -18,11 +18,72 @@ class Territory(NestedSet):
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory"))
 
-		print "*"*80
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
 		self.actual_territory_name = capitalized_name
 
+		# give territory the correct type
+		parent_and_route = {"Country":"Area","Area":"Zone","Zone":"Route"}
+		list_of_parents = frappe.get_list("Territory",
+			fields=["name","type_of_territory","parent_territory"],
+			filters = {
+				"name":self.parent_territory
+		})
+		
+		if(len(list_of_parents) == 0):
+			frappe.throw("No Such Parent")
+		else:
+			# get the first parent
+			list_of_parents[0].type_of_territory
+			supposed_parent = parent_and_route[list_of_parents[0].type_of_territory]
+			if(self.type_of_territory == supposed_parent):
+				# the parent is correct
+				pass
+			else:
+				frappe.throw("Please Change the Type of Territory to {}".format(supposed_parent))
+
+
+		# check if Territory type is route
+		if(self.type_of_territory != "Route"):
+			# check if zone is group
+			if(self.is_group == 0):
+				frappe.throw("{} Should be of Territory Type Group".format(self.type_of_territory))
+			else:
+				# pass because territory is group and hence correct
+				pass
+		else:
+			# if parent type is Route ensure it not a group
+			if(self.is_group == 1):
+				frappe.throw("A Route Cannot be a Group")
+			else:
+				# its not a group hence pass
+				pass
+
+			# check if its only one route under the territory
+			list_of_territories = frappe.get_list("Territory",
+				fields=["name"],
+				filters = {
+					"parent_territory":self.parent_territory
+			})
+
+			if(len(list_of_territories)== 0):
+				# Add a custom name for Route
+				self.name = str(self.parent_territory +" - R")
+			else:
+				# check if its an update
+				if(list_of_territories[0].name == self.name):
+					# ensure that name is the same
+					self.name = str(self.parent_territory +" - R")
+					pass
+				else:
+					frappe.throw("You Can Only Have One Route Under A Zone")
+
+		# frappe.throw("pause")
+
+		'''
+		The code below was supposed to allow territories to have the same 
+		name but it is currently commented out because it does not work
+		'''
 		# check if Territory is already saved
 		# if(self.saved == "yes"):
 		# 	# do nothing

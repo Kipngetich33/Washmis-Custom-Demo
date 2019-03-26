@@ -407,12 +407,33 @@ def check_required_details(self):
 		frappe.throw("Customer's Area Field is Empty")
 	elif(self.zone == None):
 		frappe.throw("Customer's Zone Field is Empty")
-	elif(self.route == None):
+	else:
+		# place a correct route (only for Viwasco)
+		place_a_correct_route(self)
+	# if route is still empty
+	if(self.route == None):
 		frappe.throw("Customer's Route Field is Empty")
+
+
+	# now check if the order is correct
+	# start with route
+	supposed_zone = get_parent_territory(self.route)
+	if(supposed_zone == self.zone):
+		pass
+	else:
+		frappe.throw("Route {} Does Not Belong to Zone {}".format(self.route,self.zone))
+	
+	supposed_area = get_parent_territory(self.zone)
+	if(supposed_area == self.area):
+		pass
+	else:
+		frappe.throw("Zone {} Does Not Belong to Area {}".format(self.zone,self.area))
 
 	# check if dma exists
 	if(self.dma == None):
-		frappe.throw("Customer's DMA Field is Empty")
+		# pass for now even if dma does not exist (Viwasco)
+		# frappe.throw("Customer's DMA Field is Empty")
+		pass
 	else:
 		pass
 
@@ -425,6 +446,12 @@ def check_required_details(self):
 	# check if type of customer is given
 	if(self.customer_group == None):
 		frappe.throw("Customer's Group Field is Empty")
+	else:
+		pass
+
+	# check customer type exist
+	if(len(self.customer_type) == 0):
+		frappe.throw("Customer Type Field is Empty")
 	else:
 		pass
 
@@ -466,6 +493,10 @@ def check_required_details(self):
 		else:
 			# customer is connected
 			pass
+
+	# check if bill dispatch method is given
+	if(self.bill_dispatch_methods == None):
+		frappe.throw("Specify a Bill Dispatch Method in the Bill Dispatch Method Field")
 
 def add_customer_system_no(self):
 	'''
@@ -525,3 +556,44 @@ def check_duplicate_customers(self):
 	'''
 	pass
 
+
+def place_a_correct_route(self):
+	'''
+	Finds a Route Under the DMA and Places it Under Route
+	Only for Viwasco
+	'''
+	list_of_routes = frappe.get_list("Territory",
+		fields=["name"],
+		filters = {
+			"type_of_territory":"Route",
+			"parent_territory":self.zone
+	})
+	
+	if(len(list_of_routes) == 0 ):
+		frappe.throw("Please Add a Route Under the Zone {}".format(self.zone))
+	else:
+		customer_route = list_of_routes[0].name
+		self.route = customer_route
+
+
+def get_parent_territory(territory_name):
+	'''
+	Function that gets the parent territory of
+	a territory whose name is given
+	args:
+		territory name
+	output:
+		parent territory 
+		or
+		Error Message of non existance
+	'''
+	list_of_parents = frappe.get_list("Territory",
+		fields=["name","parent_territory"],
+		filters = {
+			"name":territory_name
+	})
+	
+	if(len(list_of_parents) == 0 ):
+		frappe.throw("The Territory {} Does Not Have A Parent Territory".format(territory_name))
+	else:
+		return list_of_parents[0].parent_territory

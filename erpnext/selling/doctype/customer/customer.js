@@ -293,16 +293,16 @@ frappe.ui.form.on("Customer", "refresh", function(frm) {
 
 /* this code fetches the customer name and the project name and 
 creates a new project using those details*/
-frappe.ui.form.on("Customer", "new_project", function(frm) {
-	if(cur_frm.doc.status == "Pending Application"){
-		cur_frm.save()
-		alert_new_project("Create New Project")
-		create_new_project()
-	}
-	else{
-		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
-	}
-});
+// frappe.ui.form.on("Customer", "new_project", function(frm) {
+// 	if(cur_frm.doc.status == "Pending Application"){
+// 		cur_frm.save()
+// 		alert_new_project("Create New Project")
+// 		create_new_project()
+// 	}
+// 	else{
+// 		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
+// 	}
+// });
 
 
 /*save function */
@@ -316,11 +316,23 @@ frappe.ui.form.on("Customer", "create_application", function(frm) {
 	}
 });
 
-
 // function that runs once the document is saved
 frappe.ui.form.on("Customer", {
 	after_save: function(frm) {
 		console.log("after_save")
 		// frappe.set_route("List", "Project");
+	}
+});
+
+
+// add route automatically
+frappe.ui.form.on("Customer", "new_project", function(frm) {
+	if(cur_frm.doc.status == "Pending Application"){
+		cur_frm.save()
+		alert_new_project("Create New Project")
+		create_new_project()
+	}
+	else{
+		alert_message("Cannot Create Project for a Customer whose Status is not Pending")
 	}
 });
