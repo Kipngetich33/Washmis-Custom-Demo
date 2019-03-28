@@ -1447,8 +1447,4 @@ def bf_and_cf(self):
 	self.payment_history = payment_history_string
 	
 
-
-# just add a comment here to test if branch viwasco can push
-	
-
 	
