@@ -29,6 +29,12 @@ from erpnext.healthcare.utils import manage_invoice_submit_cancel
 
 from six import iteritems
 
+# adding custom imports
+from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import execute
+
+# standard lib imports
+import datetime
+
 form_grid_templates = {
 	"items": "templates/form_grid/item_grid.html"
 }
@@ -135,6 +141,8 @@ class SalesInvoice(SellingController):
 		if self.redeem_loyalty_points and self.loyalty_program and self.loyalty_points:
 			validate_loyalty_points(self, self.loyalty_points)
 
+		# add balance BF and CF to sales invoice
+		bf_and_cf(self)
 
 	def before_save(self):
 		set_account_for_mode_of_payment(self)
@@ -197,6 +205,7 @@ class SalesInvoice(SellingController):
 
 		if "Healthcare" in active_domains:
 			manage_invoice_submit_cancel(self, "on_submit")
+
 
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
@@ -1366,6 +1375,8 @@ def make_inter_company_invoice(doctype, source_name, target_doc=None):
 
 	return doclist
 
+
+
 @frappe.whitelist()
 def get_loyalty_programs(customer):
 	''' sets applicable loyalty program to the customer or returns a list of applicable programs '''
@@ -1381,3 +1392,61 @@ def get_loyalty_programs(customer):
 		return []
 	else:
 		return lp_details
+
+
+def bf_and_cf(self):
+	'''
+	Function that gets the BF and CF usinf the execute function
+	of accounts_recievable_summary
+	'''
+	# add filters to the query
+	ledger_filters = {'customer': self.customer}
+	customer_acc_summary = execute(ledger_filters)
+	bf = 0 # holder for the balance brought forward
+	try:
+		# this applies when there is atleast one record
+		bf = customer_acc_summary[1][0][6]
+		# add bf to sales invoice and bill
+		self.balance_bf = bf
+	except:
+		# applies when no records exist
+		bf = 0
+
+	# add bf to sales invoice and bill
+	self.balance_bf = bf
+	self.bill_amount = self.grand_total
+
+	# calculate cf
+	total_outstanding = bf + self.grand_total
+	self.balance_cf = total_outstanding
+
+	# determine total outstanding
+	if(total_outstanding > 0):
+		# the add the amount 
+		self.total_outstanding_amount = total_outstanding
+	elif(total_outstanding <=0):
+		# if balance carried forward is negative then total
+		#  outstandng amout should be zero
+		self.total_outstanding_amount = 0
+
+	# get payment entries for the last one month
+	end_date = datetime.datetime.now()
+	start_date = end_date - datetime.timedelta(days = 30)
+	list_of_payments = frappe.db.sql("SELECT name,received_amount,posting_date,payment_type from `tabPayment Entry` where party ='{}' and posting_date >= '{}' and amended_from IS NULL".format(self.customer,start_date,None))
+
+	payment_history_string = "Payments Made Between {} and {}\n".format(start_date,end_date)
+	for payment in list_of_payments:
+		if payment[3] == "Receive":
+			payment_history_string += "Amount KES {} Recieved from {} on {}\n".format(payment[1],self.customer,payment[2])
+			print payment_history_string
+		elif payment[3] == "Pay":
+			payment_history_string += "Amount KES {} Payed to {} on {}\n".format(payment[1],self.customer,payment[2])
+			
+			
+	# add payement history to invoice
+	self.payment_history = payment_history_string
+	
+
+	
+
+	

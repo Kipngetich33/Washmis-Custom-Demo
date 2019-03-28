@@ -226,5 +226,4 @@ def execute(filters=None):
 		"party_type": "Customer",
 		"naming_by": ["Selling Settings", "cust_master_name"],
 	}
-
 	return AccountsReceivableSummary(filters).run(args)
