@@ -20,8 +20,8 @@ class Territory(NestedSet):
 		
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
-		self.actual_territory_name = capitalized_name
-
+		self.name = capitalized_name
+		
 		# give territory the correct type
 		parent_and_route = {"Country":"Area","Area":"Zone","Zone":"Route"}
 		list_of_parents = frappe.get_list("Territory",
@@ -29,7 +29,7 @@ class Territory(NestedSet):
 			filters = {
 				"name":self.parent_territory
 		})
-		
+
 		if(len(list_of_parents) == 0):
 			frappe.throw("No Such Parent")
 		else:
@@ -41,19 +41,18 @@ class Territory(NestedSet):
 				pass
 			else:
 				frappe.throw("Please Change the Type of Territory to {}".format(supposed_parent))
-
-
-		# check if Territory type is route
+		
+		# check if Territory is of parent route
 		if(self.type_of_territory != "Route"):
 			# check if zone is group
-			if(self.is_group == 0):
+			if(int(self.is_group) == 0):
 				frappe.throw("{} Should be of Territory Type Group".format(self.type_of_territory))
 			else:
 				# pass because territory is group and hence correct
 				pass
 		else:
 			# if parent type is Route ensure it not a group
-			if(self.is_group == 1):
+			if(int(self.is_group) == 1):
 				frappe.throw("A Route Cannot be a Group")
 			else:
 				# its not a group hence pass
@@ -73,12 +72,14 @@ class Territory(NestedSet):
 				# check if its an update
 				if(list_of_territories[0].name == self.name):
 					# ensure that name is the same
-					self.name = str(self.parent_territory +" - R")
 					self.is_group = 0
 					pass
 				else:
 					frappe.throw("You Can Only Have One Route Under A Zone")
 
+	def on_update(self):
+		super(Territory, self).on_update()
+		self.validate_one_root()
 		'''
 		The code below was supposed to allow territories to have the same 
 		name but it is currently commented out because it does not work
@@ -107,10 +108,6 @@ class Territory(NestedSet):
 		# 	else:
 		# 		# no parent exist yet hence this the the initial setup
 		# 		pass
-
-	def on_update(self):
-		super(Territory, self).on_update()
-		self.validate_one_root()
 
 def on_doctype_update():
 	frappe.db.add_index("Territory", ["lft", "rgt"])
