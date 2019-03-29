@@ -74,6 +74,7 @@ class Territory(NestedSet):
 				if(list_of_territories[0].name == self.name):
 					# ensure that name is the same
 					self.name = str(self.parent_territory +" - R")
+					self.is_group = 0
 					pass
 				else:
 					frappe.throw("You Can Only Have One Route Under A Zone")
