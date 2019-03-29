@@ -18,6 +18,7 @@ class Territory(NestedSet):
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory"))
 		
+		'''
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
 		self.actual_territory_name = capitalized_name
@@ -77,6 +78,7 @@ class Territory(NestedSet):
 					pass
 				else:
 					frappe.throw("You Can Only Have One Route Under A Zone")
+		'''
 		'''
 		The code below was supposed to allow territories to have the same 
 		name but it is currently commented out because it does not work
