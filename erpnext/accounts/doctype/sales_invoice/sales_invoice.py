@@ -35,6 +35,9 @@ from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_sum
 # standard lib imports
 import datetime
 
+from erpnext.AfricasTalkingGateway import (SendMessage)
+from frappe.utils.background_jobs import enqueue
+
 form_grid_templates = {
 	"items": "templates/form_grid/item_grid.html"
 }
@@ -143,6 +146,9 @@ class SalesInvoice(SellingController):
 
 		# add balance BF and CF to sales invoice
 		bf_and_cf(self)
+
+		# deliver the message to the customer sms/ email
+		enqueue_long_job(self)
 
 	def before_save(self):
 		set_account_for_mode_of_payment(self)
@@ -1424,6 +1430,7 @@ def bf_and_cf(self):
 	if(total_outstanding > 0):
 		# the add the amount 
 		self.total_outstanding_amount = total_outstanding
+		
 	elif(total_outstanding <=0):
 		# if balance carried forward is negative then total
 		#  outstandng amout should be zero
@@ -1438,13 +1445,64 @@ def bf_and_cf(self):
 	for payment in list_of_payments:
 		if payment[3] == "Receive":
 			payment_history_string += "Amount KES {} Recieved from {} on {}\n".format(payment[1],self.customer,payment[2])
-			print payment_history_string
 		elif payment[3] == "Pay":
 			payment_history_string += "Amount KES {} Payed to {} on {}\n".format(payment[1],self.customer,payment[2])
 			
-			
 	# add payement history to invoice
 	self.payment_history = payment_history_string
-	
 
-	
+
+def enqueue_long_job(arg1):
+	'''
+	Function that add the task of sending sms to the background queue 
+	default
+	'''
+	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_message', self = arg1)
+
+def send_message(self):
+	'''
+	Function that get the customer, check preffered way of
+	bill delivery then sends sms
+	'''
+	customer_name = self.customer
+	customer_doc = frappe.db.sql("""SELECT name,tel_no,email_address,bill_dispatch_methods\
+		from `tabCustomer` WHERE name = '{}'""".format(customer_name))
+	tel_no = customer_doc[0][1]
+	email_add = customer_doc[0][2]
+	bill_dispatch_method = customer_doc[0][3]
+
+	if(bill_dispatch_method == "Delivery"):
+		pass
+	elif(bill_dispatch_method == "Email"):
+		type_of_invoice = self.type_of_invoice
+		bill_amount = self.outstanding_amount
+		total_outstanding_amount = self.total_outstanding_amount
+
+		message_to_send = "You have a new Invoice ({}) of {} ,your new outstanding balance is therefore {}"\
+				.format(type_of_invoice,bill_amount,total_outstanding_amount)
+		# pass this step for now
+		frappe.sendmail("kipngetich@upande.com", subject=_("Test Mail"),
+			content= _(message_to_send)
+		)
+
+	elif(bill_dispatch_method == "SMS"):
+		# send sms
+		# check if phone number exist
+		if(tel_no):
+			# phone number exists
+			
+			# comment out sending for now
+			sms = SendMessage(str(tel_no))
+			type_of_invoice = self.type_of_invoice
+			bill_amount = self.outstanding_amount
+			total_outstanding_amount = self.total_outstanding_amount
+
+			message_to_send = "You have a new Invoice ({}) of {} ,your new outstanding balance is therefore {}"\
+					.format(type_of_invoice,bill_amount,total_outstanding_amount)
+			status = sms.send(message_to_send)
+		else:
+			# phone number does not exist
+			pass
+	else:
+		# no preffered bill delivery option is chosen
+		pass
