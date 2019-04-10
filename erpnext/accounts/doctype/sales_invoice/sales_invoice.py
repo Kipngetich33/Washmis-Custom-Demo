@@ -35,6 +35,7 @@ from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_sum
 # standard lib imports
 import datetime
 
+# imports for enqueing and sending smses
 from erpnext.AfricasTalkingGateway import (SendMessage)
 from frappe.utils.background_jobs import enqueue
 
@@ -43,6 +44,7 @@ form_grid_templates = {
 }
 
 class SalesInvoice(SellingController):
+
 	def __init__(self, *args, **kwargs):
 		super(SalesInvoice, self).__init__(*args, **kwargs)
 		self.status_updater = [{
@@ -143,12 +145,9 @@ class SalesInvoice(SellingController):
 
 		if self.redeem_loyalty_points and self.loyalty_program and self.loyalty_points:
 			validate_loyalty_points(self, self.loyalty_points)
-
+		
 		# add balance BF and CF to sales invoice
 		bf_and_cf(self)
-
-		# deliver the message to the customer sms/ email
-		enqueue_long_job(self)
 
 	def before_save(self):
 		set_account_for_mode_of_payment(self)
@@ -161,7 +160,6 @@ class SalesInvoice(SellingController):
 				self.company, self.base_grand_total, self)
 
 		self.check_prev_docstatus()
-
 		if self.is_return and not self.update_billed_amount_in_sales_order:
 			# NOTE status updating bypassed for is_return
 			self.status_updater = []
@@ -204,7 +202,7 @@ class SalesInvoice(SellingController):
 			against_si_doc.make_loyalty_point_entry()
 		if self.redeem_loyalty_points and self.loyalty_points:
 			self.apply_loyalty_points()
-
+		
 		# Healthcare Service Invoice.
 		domain_settings = frappe.get_doc('Domain Settings')
 		active_domains = [d.domain for d in domain_settings.active_domains]
@@ -212,6 +210,8 @@ class SalesInvoice(SellingController):
 		if "Healthcare" in active_domains:
 			manage_invoice_submit_cancel(self, "on_submit")
 
+		# deliver the message to the customer sms/ email
+		enqueue_long_job(self)
 
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
@@ -1474,14 +1474,9 @@ def send_message(self):
 	if(bill_dispatch_method == "Delivery"):
 		pass
 	elif(bill_dispatch_method == "Email"):
-		type_of_invoice = self.type_of_invoice
-		bill_amount = self.outstanding_amount
-		total_outstanding_amount = self.total_outstanding_amount
-
-		message_to_send = "You have a new Invoice ({}) of {} ,your new outstanding balance is therefore {}"\
-				.format(type_of_invoice,bill_amount,total_outstanding_amount)
+		message_to_send = construct_message(self)
 		# pass this step for now
-		frappe.sendmail("kipngetich@upande.com", subject=_("Test Mail"),
+		frappe.sendmail(email_add, subject=_(message_to_send),
 			content= _(message_to_send)
 		)
 
@@ -1493,16 +1488,47 @@ def send_message(self):
 			
 			# comment out sending for now
 			sms = SendMessage(str(tel_no))
-			type_of_invoice = self.type_of_invoice
-			bill_amount = self.outstanding_amount
-			total_outstanding_amount = self.total_outstanding_amount
-
-			message_to_send = "You have a new Invoice ({}) of {} ,your new outstanding balance is therefore {}"\
-					.format(type_of_invoice,bill_amount,total_outstanding_amount)
-			status = sms.send(message_to_send)
+			message_to_send = construct_message(self)
+			# status = sms.send(message_to_send)
 		else:
 			# phone number does not exist
 			pass
 	else:
 		# no preffered bill delivery option is chosen
 		pass
+
+def construct_message(self):
+	'''
+	Constructs a message to be returned to the customer
+	'''
+	bill_amount = self.grand_total
+	outstanding_amount = self.outstanding_amount
+	bf = self.balance_bf
+
+	# construct message
+	message_to_send = "You have a new invoice - {} but ".format(bill_amount)
+	message_to_send += "but your previous account balance was {} your new ".format(bf)
+	message_to_send += "outstanding balance is therefore {}".format(outstanding_amount)
+
+	# return the constructed message
+	return message_to_send
+	
+
+def apply_advances(self):
+	'''
+	Function that gets advance payment for that customer
+	account and applies them to sales invoice
+	'''
+	self.allocate_advances_automatically = 1
+	self.append("advances", {
+		"reference_type": "Payment Entry",
+		"reference_name":"ACC-PAY-2019-00006",
+		'remarks': "Amount KES 50 received from test",
+		'advance_amount':100.00,
+		'allocated_amount': 50.00
+	})
+
+	# change the advance amount section
+	self.total_advance = 50.00
+	self.outstanding_amount = 0.00
+	
