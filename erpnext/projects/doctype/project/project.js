@@ -183,7 +183,6 @@ function retrive_task_details(frm,list_of_tasks){
 
 	// get the current document model
 	var doc = frappe.model.get_doc('Project',frm.docname);
-	doc.department = "Operations - UL"
 	
 	// initialize largest enddate to 01-01-1970
 	var project_end_date = new Date(0);

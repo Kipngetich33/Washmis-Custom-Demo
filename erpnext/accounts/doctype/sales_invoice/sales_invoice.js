@@ -1193,8 +1193,6 @@ frappe.ui.form.on("Sales Invoice", "refresh", function (frm) {
 // function that runs when the type_of_invoice field is clicked
 frappe.ui.form.on("Sales Invoice", "type_of_invoice", function (frm) {
 	frm.refresh()
-
 	// add advanced payments
-	
 })
 
