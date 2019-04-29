@@ -1458,6 +1458,7 @@ def enqueue_long_job(arg1):
 	default
 	'''
 	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_message', self = arg1)
+	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_valve_closing_command')
 
 def send_message(self):
 	'''
@@ -1531,4 +1532,5 @@ def apply_advances(self):
 	# change the advance amount section
 	self.total_advance = 50.00
 	self.outstanding_amount = 0.00
+
 	
