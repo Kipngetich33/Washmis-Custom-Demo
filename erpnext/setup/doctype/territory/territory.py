@@ -18,6 +18,7 @@ class Territory(NestedSet):
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory"))
 		
+		'''
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
 		self.name = capitalized_name
@@ -76,6 +77,7 @@ class Territory(NestedSet):
 					pass
 				else:
 					frappe.throw("You Can Only Have One Route Under A Zone")
+		'''
 
 	def on_update(self):
 		super(Territory, self).on_update()
