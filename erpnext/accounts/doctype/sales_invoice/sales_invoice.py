@@ -35,11 +35,20 @@ from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_sum
 # standard lib imports
 import datetime
 
+# imports for enqueing and sending smses
+from erpnext.AfricasTalkingGateway import (SendMessage)
+from frappe.utils.background_jobs import enqueue
+
+import requests
+import pymysql.cursors
+import json
+
 form_grid_templates = {
 	"items": "templates/form_grid/item_grid.html"
 }
 
 class SalesInvoice(SellingController):
+
 	def __init__(self, *args, **kwargs):
 		super(SalesInvoice, self).__init__(*args, **kwargs)
 		self.status_updater = [{
@@ -140,7 +149,7 @@ class SalesInvoice(SellingController):
 
 		if self.redeem_loyalty_points and self.loyalty_program and self.loyalty_points:
 			validate_loyalty_points(self, self.loyalty_points)
-
+		
 		# add balance BF and CF to sales invoice
 		bf_and_cf(self)
 
@@ -155,7 +164,6 @@ class SalesInvoice(SellingController):
 				self.company, self.base_grand_total, self)
 
 		self.check_prev_docstatus()
-
 		if self.is_return and not self.update_billed_amount_in_sales_order:
 			# NOTE status updating bypassed for is_return
 			self.status_updater = []
@@ -198,7 +206,7 @@ class SalesInvoice(SellingController):
 			against_si_doc.make_loyalty_point_entry()
 		if self.redeem_loyalty_points and self.loyalty_points:
 			self.apply_loyalty_points()
-
+		
 		# Healthcare Service Invoice.
 		domain_settings = frappe.get_doc('Domain Settings')
 		active_domains = [d.domain for d in domain_settings.active_domains]
@@ -206,6 +214,10 @@ class SalesInvoice(SellingController):
 		if "Healthcare" in active_domains:
 			manage_invoice_submit_cancel(self, "on_submit")
 
+		#set the posting time for sales invoice on submit
+		set_posting_time_for_sale_invoice()
+		# deliver the message to the customer sms/ email
+		enqueue_long_job(self)
 
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
@@ -1424,6 +1436,7 @@ def bf_and_cf(self):
 	if(total_outstanding > 0):
 		# the add the amount 
 		self.total_outstanding_amount = total_outstanding
+		
 	elif(total_outstanding <=0):
 		# if balance carried forward is negative then total
 		#  outstandng amout should be zero
@@ -1438,13 +1451,119 @@ def bf_and_cf(self):
 	for payment in list_of_payments:
 		if payment[3] == "Receive":
 			payment_history_string += "Amount KES {} Recieved from {} on {}\n".format(payment[1],self.customer,payment[2])
-			print payment_history_string
 		elif payment[3] == "Pay":
 			payment_history_string += "Amount KES {} Payed to {} on {}\n".format(payment[1],self.customer,payment[2])
 			
-			
 	# add payement history to invoice
 	self.payment_history = payment_history_string
+
+
+def enqueue_long_job(arg1):
+	'''
+	Function that add the task of sending sms to the background queue 
+	default
+	'''
+	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_message', self = arg1)
+
+def send_message(self):
+	'''
+	Function that get the customer, check preffered way of
+	bill delivery then sends sms
+	'''
+	# comment the send message code below for now in order to trouble-shoot
+	'''
+	customer_name = self.customer
+	customer_doc = frappe.db.sql("""SELECT name,tel_no,email_address,bill_dispatch_methods\
+		from `tabCustomer` WHERE name = '{}'""".format(customer_name))
+	tel_no = customer_doc[0][1]
+	email_add = customer_doc[0][2]
+	bill_dispatch_method = customer_doc[0][3]
+
+	if(bill_dispatch_method == "Delivery"):
+		pass
+	elif(bill_dispatch_method == "Email"):
+		message_to_send = construct_message(self)
+		# pass this step for now
+		frappe.sendmail(email_add, subject=_(message_to_send),
+			content= _(message_to_send)
+		)
+
+	elif(bill_dispatch_method == "SMS"):
+		# send sms
+		# check if phone number exist
+		if(tel_no):
+			# phone number exists
+			
+			# comment out sending for now
+			sms = SendMessage(str(tel_no))
+			message_to_send = construct_message(self)
+			# status = sms.send(message_to_send)
+		else:
+			# phone number does not exist
+			pass
+	else:
+		# no preffered bill delivery option is chosen
+		pass
+	'''
+
+def construct_message(self):
+	'''
+	Constructs a message to be returned to the customer
+	'''
+	bill_amount = self.grand_total
+	outstanding_amount = self.outstanding_amount
+	bf = self.balance_bf
+
+	# construct message
+	message_to_send = "You have a new invoice - {} but ".format(bill_amount)
+	message_to_send += "but your previous account balance was {} your new ".format(bf)
+	message_to_send += "outstanding balance is therefore {}".format(outstanding_amount)
+
+	# return the constructed message
+	return message_to_send
+
+def apply_advances(self):
+	'''
+	Function that gets advance payment for that customer
+	account and applies them to sales invoice
+	'''
+	self.allocate_advances_automatically = 1
+	self.append("advances", {
+		"reference_type": "Payment Entry",
+		"reference_name":"ACC-PAY-2019-00006",
+		'remarks': "Amount KES 50 received from test",
+		'advance_amount':100.00,
+		'allocated_amount': 50.00
+	})
+
+	# change the advance amount section
+	self.total_advance = 50.00
+	self.outstanding_amount = 0.00
+
+def set_posting_time_for_sale_invoice():
+	print "*"*80
+	# get all overdue sales invoices based on due datetime
+	connection = pymysql.connect(
+            host='localhost',
+            user='root',
+            password='Empharse333',
+            db='2f9071bd4f19be4c',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+    )
 	
+	try:
+		with connection.cursor() as cursor: 
+            # construct the sql syntax
+			sql = "SELECT name,posting_time FROM `tabSales Invoice` WHERE status = 'unpaid'"
+            # commit the changes
+			cursor.execute(sql)
+			unpaid_invoices = cursor.fetchall()
+			print unpaid_invoices
+		
+        # save changes to database
+		connection.commit()
+	finally:
+		connection.close()
 
 	

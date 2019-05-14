@@ -422,7 +422,6 @@ class Project(Document):
 		<p>{0}.</p>
 		<p><a href="{1}">{2}</a></p>
 		"""
-
 		for user in self.users:
 			if user.welcome_email_sent == 0:
 				frappe.sendmail(user.user, subject=_("Project Collaboration Invitation"),

@@ -17,6 +17,13 @@ from erpnext.controllers.accounts_controller import AccountsController, get_supp
 
 from six import string_types, iteritems
 
+# adding custom imports
+from erpnext.accounts.report.accounts_receivable_summary.accounts_receivable_summary import execute
+
+# imports for enqueing and sending smses
+from erpnext.AfricasTalkingGateway import (SendMessage)
+from frappe.utils.background_jobs import enqueue
+
 class InvalidPaymentEntry(ValidationError):
 	pass
 
@@ -60,7 +67,7 @@ class PaymentEntry(AccountsController):
 		self.validate_duplicate_entry()
 		self.validate_allocated_amount()
 		self.ensure_supplier_is_not_blocked()
-
+		
 	def on_submit(self):
 		self.setup_party_account_field()
 		if self.difference_amount:
@@ -69,6 +76,12 @@ class PaymentEntry(AccountsController):
 		self.update_outstanding_amounts()
 		self.update_advance_paid()
 		self.update_expense_claim()
+
+		# ensure that all references are added
+		# check_integrity_of_submission(self)
+
+		# send payment confirmation message
+		enqueue_long_job(self)
 
 	def on_cancel(self):
 		self.setup_party_account_field()
@@ -959,3 +972,88 @@ def get_party_and_account_balance(company, date, paid_from=None, paid_to=None, p
 		"paid_from_account_balance": get_balance_on(paid_from, date, cost_center=cost_center),
 		"paid_to_account_balance": get_balance_on(paid_to, date=date, cost_center=cost_center)
 	})
+
+
+def check_integrity_of_submission(self):
+	'''
+	Function that checks the integrity of sales
+	Invoices attached as references
+	'''
+	# get reference and amount
+
+def send_payment_confirmation(self):
+	'''
+	Function that determine the amount 
+	payed against invoices and the outstanding
+	amount
+	'''
+	# get existing balance
+	# add filters to the query
+	ledger_filters = {'customer': self.party}
+	customer_acc_summary = execute(ledger_filters)
+
+	bf = 0 # holder for the balance brought forward
+	try:
+		# this applies when there is atleast one record
+		bf = customer_acc_summary[1][0][6]	
+	except:
+		# applies when no records exist
+		bf = 0
+	
+	# get difference
+	paid_amount = self.paid_amount
+	message = "We have recieved your payment of {} ".format(paid_amount)
+	
+	# check if customer has outstanding balance
+	if bf>0:
+		# customer has outstanding balance
+		if paid_amount >= bf:
+			message += "and allocated {} to settle your outstanding balance of {} ".format(bf,bf)
+			message += "your outstanding balance you balance is now fully paid "
+			message += ", you new balance is therefore {}".format(int(paid_amount)-int(bf))
+		elif paid_amount < bf:
+			message += "and allocated {} to settle you existing balance of {} ".format(paid_amount,bf)
+			message += "you new outstanding balance is therefore {} ".format(int(bf)-int(paid_amount))
+	elif bf <=0:
+		# if customer has no outstanding balance i.e no sales invoice
+		message += "you account has been credited with {} ".format(paid_amount)
+		message += "you new account balance is therefore {}".format(int(paid_amount)-int(bf))
+
+	# send message
+	customer_name = self.party
+	customer_doc = frappe.db.sql("""SELECT name,tel_no,email_address,bill_dispatch_methods\
+		from `tabCustomer` WHERE name = '{}'""".format(customer_name))
+	tel_no = customer_doc[0][1]
+	email_add = customer_doc[0][2]
+	bill_dispatch_method = customer_doc[0][3]
+
+	if(bill_dispatch_method == "Delivery"):
+		pass
+	elif(bill_dispatch_method == "Email"):
+		# pass this step for now
+		frappe.sendmail(email_add, subject=_(message),
+			content= _(message)
+		)
+
+	elif(bill_dispatch_method == "SMS"):
+		# send sms
+		# check if phone number exist
+		if(tel_no):
+			# phone number exists
+			
+			# comment out sending for now
+			sms = SendMessage(str(tel_no))
+			# status = sms.send(message)
+		else:
+			# phone number does not exist
+			pass
+	else:
+		# no preffered bill delivery option is chosen
+		pass
+	
+def enqueue_long_job(arg1):
+	'''
+	Function that add the task of sending sms to the background queue 
+	default
+	'''
+	enqueue('erpnext.accounts.doctype.payment_entry.payment_entry.send_payment_confirmation', self = arg1)
