@@ -1464,12 +1464,13 @@ def enqueue_long_job(arg1):
 	default
 	'''
 	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_message', self = arg1)
-	enqueue('erpnext.accounts.doctype.sales_invoice.sales_invoice.send_valve_closing_command')
 
 def send_message(self):
 	'''
 	Function that get the customer, check preffered way of
 	bill delivery then sends sms
+	'''
+	# comment the send message code below for now in order to trouble-shoot
 	'''
 	customer_name = self.customer
 	customer_doc = frappe.db.sql("""SELECT name,tel_no,email_address,bill_dispatch_methods\
@@ -1503,6 +1504,7 @@ def send_message(self):
 	else:
 		# no preffered bill delivery option is chosen
 		pass
+	'''
 
 def construct_message(self):
 	'''
