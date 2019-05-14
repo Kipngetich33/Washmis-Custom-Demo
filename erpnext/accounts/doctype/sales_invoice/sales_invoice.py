@@ -39,6 +39,10 @@ import datetime
 from erpnext.AfricasTalkingGateway import (SendMessage)
 from frappe.utils.background_jobs import enqueue
 
+import requests
+import pymysql.cursors
+import json
+
 form_grid_templates = {
 	"items": "templates/form_grid/item_grid.html"
 }
@@ -210,6 +214,8 @@ class SalesInvoice(SellingController):
 		if "Healthcare" in active_domains:
 			manage_invoice_submit_cancel(self, "on_submit")
 
+		#set the posting time for sales invoice on submit
+		set_posting_time_for_sale_invoice()
 		# deliver the message to the customer sms/ email
 		enqueue_long_job(self)
 
@@ -1513,7 +1519,6 @@ def construct_message(self):
 
 	# return the constructed message
 	return message_to_send
-	
 
 def apply_advances(self):
 	'''
@@ -1532,5 +1537,31 @@ def apply_advances(self):
 	# change the advance amount section
 	self.total_advance = 50.00
 	self.outstanding_amount = 0.00
+
+def set_posting_time_for_sale_invoice():
+	print "*"*80
+	# get all overdue sales invoices based on due datetime
+	connection = pymysql.connect(
+            host='localhost',
+            user='root',
+            password='Empharse333',
+            db='2f9071bd4f19be4c',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+    )
+	
+	try:
+		with connection.cursor() as cursor: 
+            # construct the sql syntax
+			sql = "SELECT name,posting_time FROM `tabSales Invoice` WHERE status = 'unpaid'"
+            # commit the changes
+			cursor.execute(sql)
+			unpaid_invoices = cursor.fetchall()
+			print unpaid_invoices
+		
+        # save changes to database
+		connection.commit()
+	finally:
+		connection.close()
 
 	
