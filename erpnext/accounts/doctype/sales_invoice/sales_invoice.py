@@ -1546,7 +1546,7 @@ def set_posting_time_for_sale_invoice():
 	connection = pymysql.connect(
             host='localhost',
             user='root',
-            password='Empharse333',
+            password='washmis_erp',
             db='76cf18db07302d32',
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor
