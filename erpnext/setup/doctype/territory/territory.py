@@ -18,6 +18,7 @@ class Territory(NestedSet):
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory"))
 		
+		# The code below is commented since it causes issues with installation
 		'''
 		# capitalize the name
 		capitalized_name = parse_names(self.name)
