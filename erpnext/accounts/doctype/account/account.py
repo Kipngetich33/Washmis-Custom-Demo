@@ -250,3 +250,12 @@ def merge_account(old, new, is_group, root_type, company):
 	frappe.rename_doc("Account", old, new, merge=1, ignore_permissions=1)
 
 	return new
+
+@frappe.whitelist()
+def get_account_numbers():
+	return frappe.get_list("Account",
+	fields =["name"],
+	filters ={
+		"parent_account":"Accounts Receivable - UL"
+	})
+
