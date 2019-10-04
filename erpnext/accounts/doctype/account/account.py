@@ -254,7 +254,7 @@ def merge_account(old, new, is_group, root_type, company):
 @frappe.whitelist()
 def get_account_numbers():
 	return frappe.get_list("Account",
-	fields =["account_name","account_number"],
+	fields =["name","account_name","account_number"],
 	filters ={
 		"parent_account":"Accounts Receivable - UL"
 	})
