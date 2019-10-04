@@ -277,7 +277,8 @@ def get_account_numbers():
 			customer = list_of_accounts[0]
 			accout_details_dictionary["customer"] =  customer.parent
 			accout_details_dictionary["account_name"] =  account.account_name
-			accout_details_dictionary["account_number"] =  account.name
+			accout_details_dictionary["full_account_number"] =  account.name
+			accout_details_dictionary["account_number"] =  account.account_number
 
 			return_list.append(accout_details_dictionary)
 		except:
