@@ -253,9 +253,35 @@ def merge_account(old, new, is_group, root_type, company):
 
 @frappe.whitelist()
 def get_account_numbers():
-	return frappe.get_list("Account",
+	'''
+	Function that gets customer account numbers
+	'''
+	list_of_accounts = frappe.get_list("Account",
 	fields =["name","account_name","account_number"],
 	filters ={
 		"parent_account":"Accounts Receivable - UL"
 	})
+
+	return_list = []
+
+	for account in list_of_accounts:
+		accout_details_dictionary = {}
+		# get customer associated with the account
+		list_of_accounts = frappe.get_list("Party Account",
+			fields =["account","parent"],
+			filters ={
+				"account":account["name"]
+		})
+
+		try:
+			customer = list_of_accounts[0]
+			accout_details_dictionary["customer"] =  customer.parent
+			accout_details_dictionary["account_name"] =  account.account_name
+			accout_details_dictionary["account_number"] =  account.name
+
+			return_list.append(accout_details_dictionary)
+		except:
+			pass
+
+	return return_list
 
